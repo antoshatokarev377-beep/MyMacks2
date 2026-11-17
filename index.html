@@ -247,8 +247,7 @@
         marks: [] 
     };
 
-    // АГРЕССИВНАЯ ПРОВЕРКА ПРИ СТАРТЕ
-    // Принудительно создаем структуру, если её нет
+    // АГРЕССИВНАЯ ПРОВЕРКА ПРИ СТАРТЕ (однократно)
     dbRef.once('value').then((snapshot) => {
         const data = snapshot.val();
         if (!data || !data.users || data.users.length < 5) {
