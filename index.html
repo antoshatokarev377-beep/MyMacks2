@@ -163,12 +163,12 @@
         </div>
     </div>
 
-    <!-- 1. ПОДКЛЮЧАЕМ FIREBASE -->
+    <!-- ПОДКЛЮЧАЕМ FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <script>
-    // 2. ВАШ КОНФИГ ИЗ FIREBASE
+    // ВАШ КОНФИГ
     const firebaseConfig = {
         apiKey: "AIzaSyAqX7nuovxJWKUAKiRSLn4EU4W9KQyBIs4",
         authDomain: "my-school-61f15.firebaseapp.com",
@@ -180,12 +180,10 @@
         measurementId: "G-VGHC6VQJ27"
     };
 
-    // 3. ИНИЦИАЛИЗАЦИЯ
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     const dbRef = database.ref('school_data');
 
-    // 4. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     let db = { users: [], lessons: [], homework: [], marks: [] };
     let user = JSON.parse(localStorage.getItem('school_user')) || null;
     
@@ -249,28 +247,27 @@
         marks: [] 
     };
 
-    // 5. СЛУШАЕМ ОБЛАКО (С АВТОВОССТАНОВЛЕНИЕМ УЧЕНИКОВ)
+    // СЛУШАЕМ ОБЛАКО
     dbRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
             db = data;
             
-            // ПРОВЕРКА: Если ученики пропали, восстанавливаем их!
+            // ЖЕСТКАЯ ПРОВЕРКА: Если учеников нет, восстанавливаем!
             const hasStudents = db.users && db.users.some(u => u.role === 'student');
             if (!hasStudents) {
-                console.log("Ученики не найдены в облаке. Восстанавливаем...");
-                db.users = defaultDB.users; // Возвращаем 25 учеников
-                saveDB(); // Отправляем обратно в Firebase
+                console.log("Ученики не найдены. Принудительное восстановление 25 учеников...");
+                db.users = defaultDB.users; 
+                saveDB(); 
             }
             
             if (user) render();
         } else {
-            // Если база вообще пустая (самый первый запуск)
+            // База пустая — создаем заново
             dbRef.set({ users: defaultDB.users, lessons: [], homework: [], marks: [] });
         }
     });
 
-    // 6. СОХРАНЕНИЕ В ОБЛАКО
     function saveDB() {
         dbRef.set(db).catch((error) => {
             console.error(error);
