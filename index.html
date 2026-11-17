@@ -764,5 +764,93 @@
 
     render();
 </script>
+<!-- Подключаем Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+    // 1. ВСТАВЬТЕ СЮДА ВАШ firebaseConfig ИЗ ШАГА 2
+    const firebaseConfig = {
+        apiKey: "ВАШ_API_KEY",
+        authDomain: "ВАШ_PROJECT.firebaseapp.com",
+        databaseURL: "https://ВАШ_PROJECT-default-rtdb.firebaseio.com",
+        projectId: "ВАШ_PROJECT_ID",
+        storageBucket: "ВАШ_PROJECT.appspot.com",
+        messagingSenderId: "ВАШ_ID",
+        appId: "ВАШ_APP_ID"
+    };
+
+    // 2. Инициализация
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const dbRef = database.ref('school_data'); // Ссылка на нашу "папку" с данными
+
+    // 3. Глобальная переменная для данных
+    let db = { users: [], lessons: [], homework: [], marks: [] };
+    let user = JSON.parse(localStorage.getItem('school_user')) || null;
+
+    // 4. СЛУШАЕМ ИЗМЕНЕНИЯ В ОБЛАКЕ В РЕАЛЬНОМ ВРЕМЕНИ
+    // Как только вы нажмете "Сохранить" на компьютере, эта функция сработает на телефоне
+    dbRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            db = data; // Обновляем локальную копию
+            // Если мы на странице журнала/оценок, перерисовываем её
+            if (typeof render === 'function' && user) {
+                render(); 
+            }
+        } else {
+            // Если база пустая (первый запуск), заливаем стандартных пользователей
+            dbRef.set({ users: defaultDB.users, lessons: [], homework: [], marks: [] });
+        }
+    });
+
+    // 5. ФУНКЦИЯ СОХРАНЕНИЯ (заменяет старую saveDB)
+    function saveDB() {
+        // Отправляем ВСЮ базу в облако. Все устройства увидят это.
+        dbRef.set(db).catch((error) => {
+            console.error("Ошибка сохранения в Firebase:", error);
+            alert("Не удалось сохранить оценку. Проверьте интернет.");
+        });
+    }
+
+    // 6. ФУНКЦИЯ ИМПОРТА (оставим на всякий случай, но она теперь пишет в облако)
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.users && imported.marks) {
+                    db = imported;
+                    saveDB(); // Сохраняем импортированное в Firebase
+                    alert('Данные загружены в облако!');
+                    render();
+                }
+            } catch(err) { alert('Ошибка чтения.'); }
+        };
+        reader.readAsText(file);
+    }
+
+    // 7. ФУНКЦИЯ ЭКСПОРТА (оставим для резервной копии)
+    function exportData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "school_data_backup.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+
+    // --- ВАШИ ОСТАЛЬНЫЕ ФУНКЦИИ (render, handleAuth и т.д.) ---
+    // Вставьте сюда весь остальной код из вашего файла (стили, HTML, функции render...), 
+    // НО УДАЛИТЕ старую функцию saveDB() и старый скрипт инициализации db.
+    // Убедитесь, что функция render() и все компоненты на месте.
+
+    // Запуск
+    if (user) render();
+</script>
 </body>
 </html>
