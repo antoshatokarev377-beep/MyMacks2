@@ -247,31 +247,36 @@
         marks: [] 
     };
 
-    // СЛУШАЕМ ОБЛАКО
+    // АГРЕССИВНАЯ ПРОВЕРКА ПРИ СТАРТЕ
+    // Принудительно создаем структуру, если её нет
+    dbRef.once('value').then((snapshot) => {
+        const data = snapshot.val();
+        if (!data || !data.users || data.users.length < 5) {
+            console.log("!!! ВНИМАНИЕ: База пуста или повреждена. Восстанавливаем...");
+            dbRef.set({ 
+                users: defaultDB.users, 
+                lessons: [], 
+                homework: [], 
+                marks: [] 
+            }).then(() => {
+                console.log("Успешно восстановлено!");
+            });
+        }
+    });
+
+    // Слушаем изменения (для синхронизации)
     dbRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data) {
+        if (data && data.users && data.users.length >= 5) {
             db = data;
-            
-            // ЖЕСТКАЯ ПРОВЕРКА: Если учеников нет, восстанавливаем!
-            const hasStudents = db.users && db.users.some(u => u.role === 'student');
-            if (!hasStudents) {
-                console.log("Ученики не найдены. Принудительное восстановление 25 учеников...");
-                db.users = defaultDB.users; 
-                saveDB(); 
-            }
-            
             if (user) render();
-        } else {
-            // База пустая — создаем заново
-            dbRef.set({ users: defaultDB.users, lessons: [], homework: [], marks: [] });
         }
     });
 
     function saveDB() {
         dbRef.set(db).catch((error) => {
-            console.error(error);
-            alert("Ошибка сохранения! Проверьте интернет.");
+            console.error("Ошибка сохранения:", error);
+            alert("Ошибка сохранения! Проверьте интернет и правила Firebase.");
         });
     }
 
